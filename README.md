@@ -8,6 +8,7 @@ It was used to produce top-scoring systems at the WMT 16 shared translation task
 
 The changes to Nematus include:
 
+ - shuffle in disk instead of in memory 
  - arbitrary input features (factored neural machine translation) http://www.statmt.org/wmt16/pdf/W16-2209.pdf
  - ensemble decoding (and new translation API to support it)
  - dropout on all layers (Gal, 2015) http://arxiv.org/abs/1512.05287
