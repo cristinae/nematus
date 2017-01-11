@@ -4,11 +4,15 @@ NEMATUS
 Attention-based encoder-decoder model for neural machine translation
 
 This package is based on the dl4mt-tutorial by Kyunghyun Cho et al. ( https://github.com/nyu-dl/dl4mt-tutorial ).
-It was used to produce top-scoring systems at the WMT 16 shared translation task.
+It was used to produce top-scoring systems at the WMT 16 shared translation task and later modified to be used
+as a multilingual translator.
 
 The changes to Nematus include:
 
+ - output of the context vectors for a source sentence
  - shuffle in disk instead of in memory 
+
+And the changes to dl4mt-tutorial include:
  - arbitrary input features (factored neural machine translation) http://www.statmt.org/wmt16/pdf/W16-2209.pdf
  - ensemble decoding (and new translation API to support it)
  - dropout on all layers (Gal, 2015) http://arxiv.org/abs/1512.05287
