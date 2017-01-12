@@ -240,6 +240,7 @@ def main(models, source_file, saveto, save_alignment=None, k=5,
                 saveto.write('\n')
             # print the context vector (1x2048) summed for all the words
             if file_context is not None:
+                # file_context.write(' '.join(source_sentences[i]) + "\n")
                 file_context.write(" ".join(str(elem) for elem in numpy.nditer(context_vec.T)) + "\n")                                                   
             if save_alignment is not None:
               if a_json:

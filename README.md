@@ -10,6 +10,7 @@ as a multilingual translator.
 The changes to Nematus include:
 
  - output of the context vectors for a source sentence
+ - added 2D visualisation with t-SNE
  - shuffle in disk instead of in memory 
 
 And the changes to dl4mt-tutorial include:
