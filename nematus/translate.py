@@ -18,7 +18,7 @@ from hypgraph import HypGraphRenderer
 def translate_model(queue, rqueue, pid, models, options, k, normalize, verbose, nbest, return_alignment, suppress_unk, return_hyp_graph):
 
     from theano_util import (load_params, init_theano_params)
-    from nmt import (build_sampler, gen_sample, init_params)
+    from nmt import (build_sampler, gen_sample_trad, init_params)
 
     from theano.sandbox.rng_mrg import MRG_RandomStreams as RandomStreams
     from theano import shared
@@ -43,7 +43,7 @@ def translate_model(queue, rqueue, pid, models, options, k, normalize, verbose, 
 
     def _translate(seq):
         # sample given an input sequence and obtain scores
-        sample, score, word_probs, alignment, hyp_graph = gen_sample(fs_init, fs_next,
+        sample, score, word_probs, alignment, hyp_graph, context_vec = gen_sample_trad(fs_init, fs_next,
                                    numpy.array(seq).T.reshape([len(seq[0]), len(seq), 1]),
                                    trng=trng, k=k, maxlen=200,
                                    stochastic=False, argmax=False, return_alignment=return_alignment,
@@ -54,10 +54,10 @@ def translate_model(queue, rqueue, pid, models, options, k, normalize, verbose, 
             lengths = numpy.array([len(s) for s in sample])
             score = score / lengths
         if nbest:
-            return sample, score, word_probs, alignment, hyp_graph
+            return sample, score, word_probs, alignment, hyp_graph, context_vec
         else:
             sidx = numpy.argmin(score)
-            return sample[sidx], score[sidx], word_probs[sidx], alignment[sidx], hyp_graph
+            return sample[sidx], score[sidx], word_probs[sidx], alignment[sidx], hyp_graph, context_vec
 
     while True:
         req = queue.get()
@@ -101,7 +101,7 @@ def print_matrices(mm, file):
 
 
 def main(models, source_file, saveto, save_alignment=None, k=5,
-         normalize=False, n_process=5, chr_level=False, verbose=False, nbest=False, suppress_unk=False, a_json=False, print_word_probabilities=False, return_hyp_graph=False):
+         normalize=False, n_process=5, chr_level=False, verbose=False, nbest=False, suppress_unk=False, a_json=False, print_word_probabilities=False, return_hyp_graph=False, file_context=None):
     # load model model_options
     options = []
     for model in models:
@@ -203,7 +203,7 @@ def main(models, source_file, saveto, save_alignment=None, k=5,
 
     for i, trans in enumerate(_retrieve_jobs(n_samples)):
         if nbest:
-            samples, scores, word_probs, alignment, hyp_graph = trans
+            samples, scores, word_probs, alignment, hyp_graph, context_vec = trans
             if return_hyp_graph:
                 renderer = HypGraphRenderer(hyp_graph)
 		renderer.wordify(word_idict_trg)
@@ -215,6 +215,9 @@ def main(models, source_file, saveto, save_alignment=None, k=5,
                 else:
                     probs = ""
                 saveto.write('{0} ||| {1} ||| {2}{3}\n'.format(i, _seqs2words(samples[j]), scores[j], probs))
+                # print the context vector (1x2048) summed for all the words
+                if file_context is not None:
+                    file_context.write(" ".join(str(elem) for elem in numpy.nditer(context_vec.T)) + "\n")
                 # print alignment matrix for each hypothesis
                 # header: sentence id ||| translation ||| score ||| source ||| source_token_count+eos translation_token_count+eos
                 if save_alignment is not None:
@@ -225,7 +228,7 @@ def main(models, source_file, saveto, save_alignment=None, k=5,
                                         i, _seqs2words(samples[j]), scores[j], ' '.join(source_sentences[i]) , len(source_sentences[i])+1, len(samples[j])))
                     print_matrix(alignment[j], save_alignment)
         else:
-            samples, scores, word_probs, alignment, hyp_graph = trans
+            samples, scores, word_probs, alignment, hyp_graph, context_vec = trans
             if return_hyp_graph:
                 renderer = HypGraphRenderer(hyp_graph)
 		renderer.wordify(word_idict_trg)
@@ -235,6 +238,9 @@ def main(models, source_file, saveto, save_alignment=None, k=5,
                 for prob in word_probs:
                     saveto.write("{} ".format(prob))
                 saveto.write('\n')
+            # print the context vector (1x2048) summed for all the words
+            if file_context is not None:
+                file_context.write(" ".join(str(elem) for elem in numpy.nditer(context_vec.T)) + "\n")                                                   
             if save_alignment is not None:
               if a_json:
                 print_matrix_json(alignment, source_sentences[i], _seqs2words(trans[0]).split(), i, i,save_alignment)
@@ -267,6 +273,9 @@ if __name__ == "__main__":
     parser.add_argument('--output_alignment', '-a', type=argparse.FileType('w'),
                         default=None, metavar='PATH',
                         help="Output file for alignment weights (default: standard output)")
+    parser.add_argument('--output_context', type=argparse.FileType('w'),
+                        default=None, metavar='PATH',
+                        help="Output file for the context vectors (default: standard output)")
     parser.add_argument('--json_alignment', action="store_true",
                         help="Output alignment in json format")
     parser.add_argument('--n-best', action="store_true",
@@ -280,4 +289,4 @@ if __name__ == "__main__":
     main(args.models, args.input,
          args.output, k=args.k, normalize=args.n, n_process=args.p,
          chr_level=args.c, verbose=args.v, nbest=args.n_best, suppress_unk=args.suppress_unk, 
-         print_word_probabilities = args.print_word_probabilities, save_alignment=args.output_alignment, a_json=args.json_alignment, return_hyp_graph=args.search_graph)
+         print_word_probabilities = args.print_word_probabilities, save_alignment=args.output_alignment, a_json=args.json_alignment, return_hyp_graph=args.search_graph, file_context=args.output_context)
