@@ -612,6 +612,7 @@ def gen_sample(f_init, f_next, x, trng=None, k=1, maxlen=30,
 
     return sample, sample_score, sample_word_probs, alignment, hyp_graph
 
+
 # generate sample, either with stochastic sampling or beam search. Note that,
 # this function iteratively calls f_init and f_next functions.
 # Returns de context vector of the source sentence (the sum of all its words)
@@ -654,6 +655,8 @@ def gen_sample_trad(f_init, f_next, x, trng=None, k=1, maxlen=30,
     next_p = [None]*num_models
     dec_alphas = [None]*num_models
     context_vecN = [None]*num_models
+    envia = []
+    
     # get initial state of decoder rnn and encoder context
     for i in xrange(num_models):
         ret = f_init[i](x)
@@ -723,13 +726,18 @@ def gen_sample_trad(f_init, f_next, x, trng=None, k=1, maxlen=30,
                 new_word_probs.append(word_probs[ti] + [probs_flat[ranks_flat[idx]].tolist()])
                 new_hyp_scores[idx] = copy.copy(costs[idx])
                 new_hyp_states.append([copy.copy(next_state[i][ti]) for i in xrange(num_models)])
+
+
                 if return_alignment:
                     # get history of attention weights for the current hypothesis
                     new_hyp_alignment[idx] = copy.copy(hyp_alignment[ti])
                     # extend the history with current attention weights
                     new_hyp_alignment[idx].append(mean_alignment[ti])
 
-
+            # cris TODO
+            #ma =  sum(ret[3])/num_models
+            #envia = context_vec*ma
+            
             # check the finished samples
             new_live_k = 0
             hyp_samples = []
@@ -785,8 +793,9 @@ def gen_sample_trad(f_init, f_next, x, trng=None, k=1, maxlen=30,
 
     if not return_alignment:
         alignment = [None for i in range(len(sample))]
-
+        
     return sample, sample_score, sample_word_probs, alignment, hyp_graph, context_vec
+#    return sample, sample_score, sample_word_probs, alignment, hyp_graph, envia
 
 
 # calculate the log probablities on a given corpus using translation model
